@@ -1,15 +1,33 @@
 import os
 import re
 
+def get_h1_title(md_path):
+    """
+    尝试从文件中提取第一个 '# ' 开头的标题。
+    严格忽略二级 (##) 及以上的标题。
+    """
+    if not os.path.exists(md_path):
+        return None
+    try:
+        with open(md_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                # 只匹配一个 # 开头的标题，并忽略前后的空白字符
+                match = re.match(r'^#\s+(.+)', line)
+                if match:
+                    return match.group(1).strip()
+    except Exception as e:
+        print(f"读取文件失败 {md_path}: {e}")
+    return None
+
 def clean_name(name):
     """
-    清理物理目录名称，作为侧边栏展示的标题。
+    清理物理目录名称，作为最终兜底的标题。
     例如: '01-getting-started' -> 'Getting started'
     """
     cleaned = re.sub(r'^\d+-', '', name).replace('-', ' ')
     return cleaned.capitalize()
 
-def generate_physical_tree(current_dir, base_dir, depth=0):
+def generate_tree(current_dir, base_dir, depth=0):
     result_lines = []
     
     try:
@@ -23,35 +41,48 @@ def generate_physical_tree(current_dir, base_dir, depth=0):
 
     for item in items:
         item_path = os.path.join(current_dir, item)
-        title = clean_name(item)
         indent = '  ' * depth
         
-        # 检查该物理目录下是否存在教程内容文件
-        md_file = None
+        # 1. 确定当前目录下的核心内容文件，确立优先级
+        target_md = None
         if os.path.exists(os.path.join(item_path, 'article.md')):
-            md_file = 'article.md'
-        elif os.path.exists(os.path.join(item_path, 'README.md')): # 保留 README 兼容性
-            md_file = 'README.md'
+            target_md = 'article.md'
+        elif os.path.exists(os.path.join(item_path, 'index.md')):
+            target_md = 'index.md'
+        elif os.path.exists(os.path.join(item_path, 'README.md')):
+            target_md = 'README.md'
 
-        # 【核心逻辑】：先递归获取所有子文件夹的结果
-        children_lines = generate_physical_tree(item_path, base_dir, depth + 1)
+        # 2. 递归获取所有子文件夹的结果（用于剪枝判定）
+        children_lines = generate_tree(item_path, base_dir, depth + 1)
         
-        if md_file:
-            # 命中1：当前文件夹直接包含 article.md，这是一个有效的内容节点
-            link = os.path.relpath(os.path.join(item_path, md_file), base_dir).replace('\\', '/')
-            result_lines.append(f"{indent}* [{title}]({link})")
-            # 把它的子节点也挂载上来
+        # 3. 剪枝核心逻辑：判断当前路径是否为“有效路径”
+        # 有效条件：自身包含目标md文件，或者其子目录中存在有效文件（children_lines 不为空）
+        is_valid_node = (target_md is not None) or (len(children_lines) > 0)
+        
+        if is_valid_node:
+            title = None
+            
+            # 4. 尝试根据优先级提取文件中的 H1 标题
+            if target_md:
+                title = get_h1_title(os.path.join(item_path, target_md))
+            
+            # 5. 兜底逻辑：如果没有有效文件，或文件中未写 H1 标题，使用物理文件夹名
+            if not title:
+                title = clean_name(item)
+            
+            # 6. 生成 Markdown 目录节点
+            if target_md:
+                # 这是一个具体的文章节点，生成带链接的列表项
+                link = os.path.relpath(os.path.join(item_path, target_md), base_dir).replace('\\', '/')
+                result_lines.append(f"{indent}* [{title}]({link})")
+            else:
+                # 这是一个单纯的分类父节点（内部没有文章，但子文件夹有），仅加粗展示标题
+                result_lines.append(f"{indent}* **{title}**")
+            
+            # 将它的有效子节点挂载到下方
             result_lines.extend(children_lines)
             
-        else:
-            # 命中2：当前文件夹没有 article.md
-            # 判断它有没有包含有效文章的子节点，如果有，它就是一个有效的“分类父节点”
-            if children_lines:
-                result_lines.append(f"{indent}* **{title}**")
-                result_lines.extend(children_lines)
-                
-            # 命中3：如果没有 article.md，且子节点全为空（children_lines 为空列表）
-            # 这里什么都不做（直接 pass），等于将这个“空目录”彻底从侧边栏中剔除
+        # 如果 is_valid_node 为 False，说明既没有文件，子目录也全空，直接 pass 丢弃
 
     return result_lines
 
@@ -59,19 +90,19 @@ def main():
     base_dir = os.path.abspath(os.path.dirname(__file__))
     sidebar_file = os.path.join(base_dir, '_sidebar.md')
     
-    print("正在基于纯物理目录提取结构，并自动剪枝空目录...")
-    sidebar_content = generate_physical_tree(base_dir, base_dir)
+    print("正在扫描目录并提取中文大标题，同时执行空目录剪枝...")
+    sidebar_content = generate_tree(base_dir, base_dir)
     
     if not sidebar_content:
         print("未识别到目标结构，请确认在正确目录下运行。")
         return
 
     with open(sidebar_file, 'w', encoding='utf-8') as f:
-        f.write("* [🏠 Home](/)\n")
+        f.write("* [🏠 教程首页](/)\n")
         f.write('\n'.join(sidebar_content))
         f.write('\n')
 
-    print(f"✅ 生成成功！所有不包含 article.md 的多余空文件夹已被彻底忽略。")
+    print(f"✅ 生成成功！自动提取了文章的 '# ' 标题，并剔除了所有冗余的空文件夹。")
 
 if __name__ == "__main__":
     main()
