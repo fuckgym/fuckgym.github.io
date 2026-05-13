@@ -1,30 +1,64 @@
 <!DOCTYPE html>
-   <html lang="zh-CN">
-   <head>
-     <meta charset="UTF-8">
-     <title>现代 JavaScript 教程</title>
-     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-     <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-     <!-- 引入 Docsify 默认主题，也可以换成其他主题 -->
-     <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/lib/themes/vue.css">
-   </head>
-   <body>
-     <div id="app">加载中...</div>
-     <script>
-       window.$docsify = {
-         name: 'JavaScript 教程',
-         repo: 'fuckgym/fuckgym.github.io',
-         loadSidebar: true, // 开启左侧侧边栏
-         subMaxLevel: 3,    // 侧边栏自动提取 Markdown 标题的层级
-         auto2top: true,    // 切换页面后自动跳转到顶部
-         search: 'auto'     // 开启全局搜索（需要配合搜索插件）
-       }
-     </script>
-     <!-- Docsify 核心脚本 -->
-     <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script>
-     <!-- 搜索插件 -->
-     <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
-     <!-- 代码高亮（默认支持 JS/HTML/CSS，原文档包含较多高阶用法，可按需补充） -->
-     <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-javascript.min.js"></script>
-   </body>
-   </html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>现代 JavaScript 教程</title>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- 1. Docsify 默认主题 (Vue 风格) -->
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify/lib/themes/vue.css">
+  
+  <!-- 2. 右侧 TOC 插件的样式 -->
+  <link rel="stylesheet" href="//unpkg.com/docsify-plugin-toc@1.3.1/dist/light.css">
+  
+  <!-- 3. 左侧目录折叠插件的样式 (这里使用箭头风格，也可选文件夹风格) -->
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/sidebar.min.css" />
+  
+  <style>
+    /* 微调右侧 TOC 目录的字体大小，使其更美观 */
+    .page_toc { font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="app">加载中...</div>
+  
+  <script>
+    window.$docsify = {
+      name: 'JavaScript 教程',
+      repo: 'fuckgym/fuckgym.github.io', // 替换为你的真实仓库
+      
+      // 开启左侧侧边栏读取
+      loadSidebar: true,
+      
+      // 【关键配置 1】让左侧只管文件层级，不提取文章内的 h2/h3，避免左侧混乱
+      subMaxLevel: 0, 
+      
+      // 【关键配置 2】左侧侧边栏的默认展开层级。
+      // 设为 1 表示默认只展开第一级（大章），其余全部收起。用户点击时再展开子层级。
+      sidebarDisplayLevel: 1, 
+      
+      auto2top: true, // 切换页面自动回到顶部
+      
+      // 【关键配置 3】配置右侧 TOC 插件
+      toc: {
+        tocMaxLevel: 4,     // 提取至 H4 标签
+        target: 'h2, h3, h4', 
+        ignore: 'h1',       // 忽略 H1 (通常是文章大标题)
+      },
+    }
+  </script>
+  
+  <!-- Docsify 核心 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/docsify.min.js"></script>
+  
+  <!-- 左侧目录折叠插件 JS -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-sidebar-collapse/dist/docsify-sidebar-collapse.min.js"></script>
+  
+  <!-- 右侧 TOC 插件 JS -->
+  <script src="//unpkg.com/docsify-plugin-toc@1.3.1/dist/docsify-plugin-toc.min.js"></script>
+  
+  <!-- JS 代码高亮插件 -->
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-javascript.min.js"></script>
+</body>
+</html>
