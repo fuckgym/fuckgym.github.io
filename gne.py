@@ -1,98 +1,77 @@
 import os
 import re
 
-def get_h1_title(md_path):
+def clean_name(name):
     """
-    只读取 Markdown 文件的第一个一级标题 (#) 作为侧边栏的展示名称。
-    严格忽略二级 (##) 及以上的标题。
-    """
-    try:
-        with open(md_path, 'r', encoding='utf-8') as f:
-            for line in f:
-                # 只匹配一个 # 开头的标题
-                match = re.match(r'^#\s+(.+)', line)
-                if match:
-                    return match.group(1).strip()
-    except Exception as e:
-        print(f"读取文件失败 {md_path}: {e}")
-    return None
-
-def format_folder_name(name):
-    """
-    如果文件夹内没有 Markdown 文件或没写标题，用文件夹名兜底。
-    例如将 '01-getting-started' 转换为 'Getting started'
+    清理物理目录名称，作为侧边栏展示的标题。
+    例如: '01-getting-started' -> 'Getting started'
     """
     cleaned = re.sub(r'^\d+-', '', name).replace('-', ' ')
     return cleaned.capitalize()
 
-def generate_tree(current_dir, base_dir, depth=0):
-    lines = []
+def generate_physical_tree(current_dir, base_dir, depth=0):
+    result_lines = []
     
     try:
-        # 只遍历以数字开头的核心教程目录（如 1-js, 2-ui）
+        # 仅过滤出当前层级以数字开头的目录
         items = [d for d in os.listdir(current_dir) if os.path.isdir(os.path.join(current_dir, d)) and re.match(r'^\d+', d)]
     except OSError:
         return []
 
-    # 按照开头的数字序号进行排序，保证教程先后顺序
+    # 按物理名称排序，确保目录树的先后顺序与官方一致
     items.sort()
 
     for item in items:
         item_path = os.path.join(current_dir, item)
+        title = clean_name(item)
+        indent = '  ' * depth
         
-        # 寻找当前目录下的入口文件
+        # 检查该物理目录下是否存在教程内容文件
         md_file = None
         if os.path.exists(os.path.join(item_path, 'article.md')):
             md_file = 'article.md'
-        elif os.path.exists(os.path.join(item_path, 'README.md')):
+        elif os.path.exists(os.path.join(item_path, 'README.md')): # 保留 README 兼容性
             md_file = 'README.md'
 
-        title = None
-        link = ""
-
-        if md_file:
-            md_path = os.path.join(item_path, md_file)
-            title = get_h1_title(md_path)
-            # 转换为相对链接，并保证在不同操作系统下都是正斜杠
-            link = os.path.relpath(md_path, base_dir).replace('\\', '/')
+        # 【核心逻辑】：先递归获取所有子文件夹的结果
+        children_lines = generate_physical_tree(item_path, base_dir, depth + 1)
         
-        if not title:
-            title = format_folder_name(item)
-
-        # 保证严格的 Markdown 缩进格式，这对折叠插件至关重要
-        indent = '  ' * depth
-        if link:
-            # 有具体文章的节点
-            lines.append(f"{indent}* [{title}]({link})")
+        if md_file:
+            # 命中1：当前文件夹直接包含 article.md，这是一个有效的内容节点
+            link = os.path.relpath(os.path.join(item_path, md_file), base_dir).replace('\\', '/')
+            result_lines.append(f"{indent}* [{title}]({link})")
+            # 把它的子节点也挂载上来
+            result_lines.extend(children_lines)
+            
         else:
-            # 仅作为分类的父级节点，没有文章链接
-            lines.append(f"{indent}* **{title}**")
+            # 命中2：当前文件夹没有 article.md
+            # 判断它有没有包含有效文章的子节点，如果有，它就是一个有效的“分类父节点”
+            if children_lines:
+                result_lines.append(f"{indent}* **{title}**")
+                result_lines.extend(children_lines)
+                
+            # 命中3：如果没有 article.md，且子节点全为空（children_lines 为空列表）
+            # 这里什么都不做（直接 pass），等于将这个“空目录”彻底从侧边栏中剔除
 
-        # 递归进入下一层级
-        lines.extend(generate_tree(item_path, base_dir, depth + 1))
-
-    return lines
+    return result_lines
 
 def main():
     base_dir = os.path.abspath(os.path.dirname(__file__))
     sidebar_file = os.path.join(base_dir, '_sidebar.md')
     
-    print("正在扫描教程目录，提取文件层级结构...")
-    sidebar_content = generate_tree(base_dir, base_dir)
+    print("正在基于纯物理目录提取结构，并自动剪枝空目录...")
+    sidebar_content = generate_physical_tree(base_dir, base_dir)
     
     if not sidebar_content:
-        print("警告：未找到符合格式的目录，请确认脚本运行在正确的根目录下。")
+        print("未识别到目标结构，请确认在正确目录下运行。")
         return
 
-    # 写入 _sidebar.md
     with open(sidebar_file, 'w', encoding='utf-8') as f:
-        # 插入顶部的首页导航
-        f.write("* [🏠 教程首页](/)\n")
+        f.write("* [🏠 Home](/)\n")
         f.write('\n'.join(sidebar_content))
         f.write('\n')
 
-    print(f"✅ 成功生成！共有 {len(sidebar_content)} 个文件/目录节点被写入 _sidebar.md")
-    print("注意：文章内的 h2/h3 标题已全部剔除，请交由 Docsify TOC 插件在右侧动态渲染。")
+    print(f"✅ 生成成功！所有不包含 article.md 的多余空文件夹已被彻底忽略。")
 
 if __name__ == "__main__":
     main()
