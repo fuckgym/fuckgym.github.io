@@ -1,0 +1,49 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <style>
+    #field {
+      width: 200px;
+      border: 10px groove black;
+      background-color: #00FF00;
+      position: relative;
+    }
+
+    #ball {
+      position: absolute;
+    }
+  </style>
+</head>
+
+<body>
+
+
+  <div id="field">
+    <img src="https://js.cx/clipart/ball.svg" height="40" width="40" id="ball"> . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+    . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . . .
+  </div>
+
+
+  <script>
+    const ball = document.getElementById('ball');
+    const field = document.getElementById('field');
+
+    // 因为在页面渲染（包括样式计算）完成前，field.clientWidth = 0，所以先判断获取到的 field 宽/高是否有值
+    // 有值则进行计算，没值则在 100ms 后再次获取并判断，时间长短可自行设定
+    const updateBallPosition = () => {
+      if (field.clientWidth && field.clientHeight) {
+        ball.style.left = Math.round(field.clientWidth / 2) + 'px';
+        ball.style.top = Math.round(field.clientHeight / 2) + 'px';
+      } else {
+        setTimeout(updateBallPosition, 100);
+      }
+    };
+
+    updateBallPosition();
+  </script>
+
+
+</body>
+
+</html>

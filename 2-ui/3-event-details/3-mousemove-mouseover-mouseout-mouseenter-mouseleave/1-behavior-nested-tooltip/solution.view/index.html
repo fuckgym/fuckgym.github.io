@@ -1,0 +1,123 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <style>
+    body {
+      height: 2000px;
+      /* 在页面滚动后，工具提示也应该正常展示 */
+    }
+
+    .tooltip {
+      position: fixed;
+      z-index: 100;
+
+      padding: 10px 20px;
+
+      border: 1px solid #b3c9ce;
+      border-radius: 4px;
+      text-align: center;
+      font: italic 14px/1.3 sans-serif;
+      color: #333;
+      background: #fff;
+      box-shadow: 3px 3px 3px rgba(0, 0, 0, .3);
+    }
+
+    #house {
+      margin-top: 50px;
+      width: 400px;
+      border: 1px solid brown;
+    }
+
+    #roof {
+      width: 0;
+      height: 0;
+      border-left: 200px solid transparent;
+      border-right: 200px solid transparent;
+      border-bottom: 20px solid brown;
+      margin-top: -20px;
+    }
+
+    p {
+      text-align: justify;
+      margin: 10px 3px;
+    }
+  </style>
+</head>
+
+<body>
+
+
+  <div data-tooltip="这是房子的内部" id="house">
+    <div data-tooltip="这里是屋顶" id="roof"></div>
+
+    <p>从前有一个猪妈妈，她养了三只小猪。</p>
+
+    <p>三只小猪长得很快快，妈妈对它们说：“你们太大了，不能住在这里了，你们自己去盖房子吧，但要小心不要让狼抓到你们。”</p>
+
+    <p>三只小猪出发了。 “我们会注意不要让狼抓住我们，”他们说。</p>
+
+    <p>很快，它们遇到了一个男人。<a href="https://en.wikipedia.org/wiki/The_Three_Little_Pigs" data-tooltip="继续阅读...">鼠标悬浮在我上</a></p>
+
+  </div>
+
+  <script>
+    let tooltip;
+
+    document.onmouseover = function(event) {
+      // important: a fast-moving mouse may "jump" right to a child on an annotated node, skipping the parent
+      // so mouseover may happen on a child.
+
+      let anchorElem = event.target.closest('[data-tooltip]');
+
+      if (!anchorElem) return;
+
+      // show tooltip and remember it
+      tooltip = showTooltip(anchorElem, anchorElem.dataset.tooltip);
+    }
+
+    document.onmouseout = function() {
+      // it is possible that mouseout triggered, but we're still inside the element
+      // (its target was inside, and it bubbled)
+      // but in this case we'll have an immediate mouseover,
+      // so the tooltip will be destroyed and shown again
+      //
+      // luckily, the "blinking" won't be visible,
+      // as both events happen almost at the same time
+      if (tooltip) {
+        tooltip.remove();
+        tooltip = false;
+      }
+
+    }
+
+
+    function showTooltip(anchorElem, html) {
+      let tooltipElem = document.createElement('div');
+      tooltipElem.className = 'tooltip';
+      tooltipElem.innerHTML = html;
+      document.body.append(tooltipElem);
+
+      let coords = anchorElem.getBoundingClientRect();
+
+      // position the tooltip over the center of the element
+      let left = coords.left + (anchorElem.offsetWidth - tooltipElem.offsetWidth) / 2;
+      if (left < 0) left = 0;
+
+      let top = coords.top - tooltipElem.offsetHeight - 5;
+      if (top < 0) {
+        top = coords.top + anchorElem.offsetHeight + 5;
+      }
+
+      tooltipElem.style.left = left + 'px';
+      tooltipElem.style.top = top + 'px';
+
+      return tooltipElem;
+    }
+
+
+  </script>
+
+</body>
+</html>
